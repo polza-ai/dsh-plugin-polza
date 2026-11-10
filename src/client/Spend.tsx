@@ -55,8 +55,6 @@ export function SpendPill({ t, store, sessionId }: { t: T; store: PolzaStore; se
       <span className={`pz-pill${lowCache ? ' warn' : ''}`}>
         <PolzaMark size={13} />
         ≈ {formatRub(spend.rub)}
-        <span className="pz-pill-sep">·</span>
-        {t('spendCacheShort')} {percent(rate)}
       </span>
       <span className="pz-pop" role="tooltip">{content}</span>
     </span>
