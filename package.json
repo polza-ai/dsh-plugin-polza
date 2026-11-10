@@ -110,5 +110,10 @@
     "polza",
     "llm"
   ],
-  "icon": "./icon.svg"
+  "icon": "./icon.svg",
+  "author": "АО «ПОЛЬЗА.АИ» (Polza.AI) <https://polza.ai>",
+  "homepage": "https://github.com/polza-ai/dsh-plugin-polza#readme",
+  "bugs": {
+    "url": "https://github.com/polza-ai/dsh-plugin-polza/issues"
+  }
 }
