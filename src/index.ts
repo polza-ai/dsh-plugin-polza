@@ -21,7 +21,9 @@ import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/cordis-plugin-loader'
 import z from '@deepseek-ai/schemastery'
 import { assertUsableApiKey, LlmError, resolveImageAttachmentAccess } from '@deepseek-ai/dsh-llm'
-import type { LlmModelInfo } from '@deepseek-ai/dsh-llm'
+import type { GenerateOptions, LlmModelInfo, PreparedAdapterCall, StreamChunk } from '@deepseek-ai/dsh-llm'
+import { withBillingErrors } from './billing.ts'
+import type { BillingAlert } from './billing.ts'
 import type {} from '@deepseek-ai/dsh-attachment'
 import type {} from '@deepseek-ai/dsh-fs'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
@@ -32,12 +34,19 @@ import type { Api, Model } from '@earendil-works/pi-ai'
 import { PolzaCatalogStore, trimSlash } from './catalog.ts'
 import { POLZA_DEFAULT_BASE_URL, POLZA_PROVIDER_ID, POLZA_STARTER_MODELS } from './contract.ts'
 import type { PolzaCatalogModel } from './contract.ts'
-import { describe, toPiModel } from './models.ts'
+import { describe, modelBadge, toPiModel } from './models.ts'
 import { buildPolzaProfile, fallbackModel, POLZA_AUTH } from './route.ts'
 import { registerPolzaCommand } from './commands.ts'
 import { WhitelistStore } from './whitelist.ts'
 import { PolzaApi } from './http-api.ts'
 import { PolzaIconStore } from './icons.ts'
+import { SpendLedger } from './spend.ts'
+import { PrefsStore } from './prefs.ts'
+import { registerMediaTools } from './tools.ts'
+import { transcribe } from './media.ts'
+import { brandString } from '@deepseek-ai/dsh-brand'
+import type {} from '@deepseek-ai/dsh-tools'
+import type { SpeechProviderId } from '@deepseek-ai/dsh-experimental-speech-to-text'
 import type {} from '@deepseek-ai/dsh-client-connection'
 
 export const name = 'llm-polza'
@@ -70,16 +79,45 @@ export function dshHome(): string {
 
 /** PiAiAdapter с описаниями моделей (цена, окно) в пикере. */
 class PolzaAdapter extends PiAiAdapter {
-  constructor(options: ConstructorParameters<typeof PiAiAdapter>[0], private readonly catalogEntry: (id: string) => PolzaCatalogModel | undefined) {
+  constructor(
+    options: ConstructorParameters<typeof PiAiAdapter>[0],
+    private readonly catalogEntry: (id: string) => PolzaCatalogModel | undefined,
+    private readonly hooks: { billing: (alert: BillingAlert) => void; usage: (options: GenerateOptions, chunk: StreamChunk) => void },
+  ) {
     super(options)
+  }
+
+  private wrap(options: GenerateOptions, inner: AsyncIterable<StreamChunk>): AsyncIterable<StreamChunk> {
+    const hooks = this.hooks
+    return (async function* () {
+      for await (const chunk of withBillingErrors(inner, hooks.billing)) {
+        if (chunk.type === 'usage') hooks.usage(options, chunk)
+        yield chunk
+      }
+    })()
+  }
+
+  override stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
+    return this.wrap(options, super.stream(options))
+  }
+
+  override async prepareCall(provider: string, model: string, signal?: AbortSignal): Promise<PreparedAdapterCall> {
+    const prepared = await super.prepareCall(provider, model, signal)
+    return { model: prepared.model, stream: options => this.wrap(options, prepared.stream(options)) }
   }
 
   override async listModels(provider: string): Promise<readonly LlmModelInfo[]> {
     const models = await super.listModels(provider)
     return models.map((model) => {
       const entry = this.catalogEntry(model.id)
-      const description = entry === undefined ? '' : describe(entry)
-      return description.length === 0 ? model : { ...model, description }
+      if (entry === undefined) return model
+      const description = describe(entry)
+      const badge = modelBadge(entry)
+      return {
+        ...model,
+        ...description.length === 0 ? {} : { description },
+        ...badge === undefined ? {} : { badge },
+      }
     })
   }
 }
@@ -166,7 +204,10 @@ export function apply(ctx: Context, config: Config): void {
     onReplayDegrade: ({ model, reason }) => {
       ctx.logger.warn(`${LOG} история ${model}: replay недоступен, отправляю нейтральный контент (${reason})`)
     },
-  }, id => catalog.get(id))
+  }, id => catalog.get(id), {
+    billing: (alert) => { api.reportBilling(alert) },
+    usage: (options, chunk) => { api.reportUsage(options, chunk) },
+  })
 
   ctx.llm.registerAdapter([PROVIDER], adapter)
   ctx.on('loader/volatile-update', () => { memo = undefined; modelsUpdated() })
@@ -180,6 +221,24 @@ export function apply(ctx: Context, config: Config): void {
     return () => { clearInterval(timer) }
   })
 
+  const prefs = new PrefsStore(join(dshHome(), 'polza', 'settings.json'))
+  ctx.effect(() => { void prefs.load(); return () => {} }, 'polza: prefs')
+
+  // Служебные вызовы (заголовок сессии, сжатие контекста) на маршруте polza — дешёвой модели из настроек.
+  const redirected = new WeakSet<object>()
+  ctx.on('llm/stream', (options, next) => {
+    const side = prefs.current().sideModel
+    const purpose = (options as { purpose?: string }).purpose
+    if (side === null || redirected.has(options) || options.provider !== PROVIDER || options.model === side
+      || (purpose !== 'session-title' && purpose !== 'compaction')) return next()
+    const { reasoningEffort: _effort, ...rest } = options
+    const copy = { ...rest, model: side } as typeof options
+    redirected.add(copy)
+    return ctx.llm.stream(copy)
+  })
+
+  const spend = new SpendLedger(join(dshHome(), 'polza', 'spend.json'), (error) => { ctx.logger.warn(`${LOG} расход: %s`, String(error)) })
+  ctx.effect(() => { void spend.load(); return () => { void spend.save() } }, 'polza: spend ledger')
   const credentialsOrThrow = () => {
     const service = services.credentials
     if (service === undefined) throw new Error('в этой сборке нет хранилища учётных данных')
@@ -193,12 +252,47 @@ export function apply(ctx: Context, config: Config): void {
     catalog,
     whitelist: models,
     icons: new PolzaIconStore(join(dshHome(), 'polza', 'icons')),
+    spend,
+    prefs,
     log: (message) => { ctx.logger.warn(`${LOG} ${message}`) },
   })
   ctx.inject(['connection'], (scope) => {
     for (const route of api.routes()) {
       scope.effect(() => scope.connection.fetch.register({ ...route, requestBody: 'buffered' }), `polza: ${route.path}`)
     }
+  })
+
+  ctx.inject(['tools'], (child) => {
+    registerMediaTools(child, {
+      baseUrl,
+      apiKey: async () => {
+        const key = await currentKey()
+        if (key === undefined) throw new Error('нет ключа Пользы: войдите в Настройки → Польза')
+        return key
+      },
+      attachments: () => services.attachments,
+    })
+  })
+
+  // Голосовой ввод harness (экспериментальный бандл): распознавание GigaAM через Пользу.
+  ctx.inject(['speechToText'], (child) => {
+    child.effect(() => child.speechToText.register({
+      info: {
+        id: brandString<SpeechProviderId>('polza-gigaam'),
+        name: 'Польза · GigaAM',
+        location: 'cloud',
+        languages: ['auto', 'ru', 'en'],
+      },
+      transcribe: async (input, signal) => {
+        const key = await currentKey()
+        if (key === undefined) throw new Error('нет ключа Пользы: войдите в Настройки → Польза')
+        const started = Date.now()
+        const text = await transcribe(baseUrl, key, input.audio, 'audio/wav', {
+          ...input.language === 'auto' ? {} : { language: input.language }, signal,
+        })
+        return { text, audioSeconds: Math.max(0, input.audio.byteLength - 44) / 32_000, inferenceSeconds: (Date.now() - started) / 1000 }
+      },
+    }), 'polza: speech provider')
   })
 
   ctx.inject(['commands'], (child) => {

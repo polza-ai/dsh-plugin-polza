@@ -4,6 +4,7 @@ import { formatRub } from './api.ts'
 import type { CatalogRow, PolzaState, PolzaStore } from './api.ts'
 import { PolzaBadge } from './brand.tsx'
 import { resetLabel } from './locale.ts'
+import { MODEL_PRESETS } from '../presets.ts'
 import type { T } from './locale.ts'
 
 const DASHBOARD = 'https://polza.ai/dashboard'
@@ -117,6 +118,7 @@ function ModelsEditor({ t, store, state }: { t: T; store: PolzaStore; state: Pol
   const [selection, setSelection] = useState<string[]>(state.models)
   const [query, setQuery] = useState('')
   const [vendor, setVendor] = useState('')
+  const [onlyRu, setOnlyRu] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   useEffect(() => { store.catalog().then(setCatalog, (e: unknown) => { setStatus(e instanceof Error ? e.message : String(e)) }) }, [store])
   const saved = state.models.join('\n')
@@ -125,9 +127,9 @@ function ModelsEditor({ t, store, state }: { t: T; store: PolzaStore; state: Pol
   const vendors = useMemo(() => [...new Set(catalog.map(row => row.vendor))].sort((a, b) => a.localeCompare(b)), [catalog])
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return catalog.filter(row => (vendor === '' || row.vendor === vendor)
+    return catalog.filter(row => (vendor === '' || row.vendor === vendor) && (!onlyRu || row.fz152)
       && (q === '' || row.id.toLowerCase().includes(q) || row.name.toLowerCase().includes(q)))
-  }, [catalog, query, vendor])
+  }, [catalog, query, vendor, onlyRu])
   const dirty = selection.join('\n') !== saved
   const move = (index: number, delta: number) => {
     const next = [...selection]
@@ -163,7 +165,8 @@ function ModelsEditor({ t, store, state }: { t: T; store: PolzaStore; state: Pol
                   <div className="pz-grow">
                     <div className="pz-row">
                       <span className="pz-title">{row?.name ?? id}</span>
-                      {index === 0 ? <Tag tone="success">default</Tag> : null}
+                      {index === 0 ? <Tag tone="neutral">{t('default')}</Tag> : null}
+                      {row?.fz152 ? <Tag tone="success">{t('fz152')}</Tag> : row?.russia ? <Tag tone="info">{t('russia')}</Tag> : null}
                     </div>
                     <div className="pz-dim">{id}{row ? ` · ${price(row)}` : catalog.length > 0 ? ` · ${t('missing')}` : ''}</div>
                   </div>
@@ -175,13 +178,26 @@ function ModelsEditor({ t, store, state }: { t: T; store: PolzaStore; state: Pol
             })}
           </div>
         )}
+      <div className="pz-row" style={{ flexWrap: 'wrap' }}>
+        <span className="pz-muted">{t('presets')}</span>
+        {MODEL_PRESETS.map(preset => (
+          <Button key={preset.id} variant="outline" size="sm" disabled={catalog.length === 0}
+            onClick={() => { setSelection(preset.models.filter(id => byId.has(id))) }}>
+            {t(`preset_${preset.id}`)}
+          </Button>
+        ))}
+      </div>
       <div className="pz-row">
         <Input className="pz-input" placeholder={t('search')} value={query} onChange={(event) => { setQuery(event.target.value) }} />
         <select className="pz-select" value={vendor} onChange={(event) => { setVendor(event.target.value) }}>
           <option value="">{t('allVendors')}</option>
           {vendors.map(name => <option key={name} value={name}>{name}</option>)}
         </select>
-        <span className="pz-dim">{t('count', { count: catalog.length })}</span>
+        <label className="pz-row pz-muted" style={{ gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+          <input type="checkbox" className="pz-check" checked={onlyRu} onChange={(event) => { setOnlyRu(event.target.checked) }} />
+          {t('onlyFz')}
+        </label>
+        <span className="pz-dim">{t('count', { count: filtered.length })}</span>
       </div>
       <div className="pz-list pz-scroll">
         {filtered.slice(0, 300).map(row => (
@@ -192,11 +208,50 @@ function ModelsEditor({ t, store, state }: { t: T; store: PolzaStore; state: Pol
                 <span>{row.vendor}: {row.name}</span>
                 {row.reasoning ? <Tag tone="quiet">{t('reasoning')}</Tag> : null}
                 {row.image ? <Tag tone="quiet">{t('vision')}</Tag> : null}
+                {row.tools ? null : <Tag tone="warning">{t('noTools')}</Tag>}
+                {row.fz152 ? <Tag tone="success">{t('fz152')}</Tag> : row.russia ? <Tag tone="info">{t('russia')}</Tag> : null}
               </div>
               <div className="pz-dim">{row.id}{price(row) ? ` · ${price(row)}` : ''}{row.contextLength ? ` · ${Math.round(row.contextLength / 1000)}K` : ''}</div>
             </div>
           </label>
         ))}
+      </div>
+    </div>
+  )
+}
+
+function PrefsCard({ t, store, state }: { t: T; store: PolzaStore; state: PolzaState }) {
+  const [catalog, setCatalog] = useState<CatalogRow[]>([])
+  const [low, setLow] = useState(String(state.prefs.lowBalanceRub))
+  useEffect(() => { store.catalog().then(setCatalog, () => {}) }, [store])
+  const options = useMemo(() => {
+    const rows = catalog.filter(row => row.tools).sort((a, b) => (a.promptRub ?? 1e9) - (b.promptRub ?? 1e9))
+    const side = state.prefs.sideModel
+    return side !== null && !rows.some(row => row.id === side) ? [{ id: side, name: side, vendor: '', promptRub: null, completionRub: null } as CatalogRow, ...rows] : rows
+  }, [catalog, state.prefs.sideModel])
+  return (
+    <div className="pz-card">
+      <div className="pz-row">
+        <div className="pz-grow">
+          <div className="pz-title">{t('sideModel')}</div>
+          <div className="pz-muted">{t('sideModelHint')}</div>
+        </div>
+        <select className="pz-select" style={{ maxWidth: 320 }} value={state.prefs.sideModel ?? ''}
+          onChange={(event) => { void store.savePrefs({ sideModel: event.target.value === '' ? null : event.target.value }) }}>
+          <option value="">{t('sideSame')}</option>
+          {options.map(row => <option key={row.id} value={row.id}>{row.vendor ? `${row.vendor}: ` : ''}{row.name}{price(row) ? ` · ${price(row)}` : ''}</option>)}
+        </select>
+      </div>
+      <div className="pz-row">
+        <div className="pz-grow pz-muted">{t('lowBalanceLabel')}</div>
+        <Input style={{ width: 100 }} inputMode="numeric" value={low} onChange={(event) => { setLow(event.target.value) }}
+          onBlur={() => { const n = Number(low); if (Number.isFinite(n) && n >= 0) void store.savePrefs({ lowBalanceRub: n }); else setLow(String(state.prefs.lowBalanceRub)) }} />
+      </div>
+      <div className="pz-row">
+        <div className="pz-grow">
+          <div className="pz-title">{t('extras')}</div>
+          <div className="pz-muted">{t('extrasText')}</div>
+        </div>
       </div>
     </div>
   )
@@ -216,6 +271,7 @@ export function PolzaSection({ t, store }: { t: T; store: PolzaStore }) {
       {error ? <div className="pz-error">{error}</div> : null}
       {loading && state === null ? null : state?.signedIn ? <AccountCard t={t} store={store} state={state} /> : <SignedOut t={t} store={store} state={state} />}
       {state ? <ModelsEditor t={t} store={store} state={state} /> : null}
+      {state ? <PrefsCard t={t} store={store} state={state} /> : null}
       <div className="pz-dim">{t('footer')}</div>
     </div>
   )

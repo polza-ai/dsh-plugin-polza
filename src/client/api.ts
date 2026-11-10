@@ -1,7 +1,10 @@
 // Клиент к /api/polza/* хоста плюс общий стор состояния для всех мест UI.
 import type { CatalogRow, PolzaState } from '../http-api.ts'
+import type { SessionSpend } from '../spend.ts'
+import type { PolzaPrefs } from '../prefs.ts'
 
-export type { CatalogRow, PolzaState }
+export type { CatalogRow, PolzaState, PolzaPrefs }
+export type SpendView = SessionSpend & { cacheHitRate: number | null }
 
 function url(path: string): string {
   return new URL(`api/polza/${path}`, document.baseURI).href
@@ -91,6 +94,15 @@ export class PolzaStore {
 
   async saveModels(models: readonly string[]): Promise<void> {
     await call('models', { method: 'POST', body: { models } })
+    await this.refresh()
+  }
+
+  async spend(sessionId: string): Promise<SpendView | null> {
+    return (await call<{ spend: SpendView | null }>(`spend?session=${encodeURIComponent(sessionId)}`)).spend
+  }
+
+  async savePrefs(patch: Partial<PolzaPrefs>): Promise<void> {
+    await call('prefs', { method: 'POST', body: patch })
     await this.refresh()
   }
 

@@ -15,9 +15,10 @@ export function BalanceChip({ t, store, wide }: { t: T; store: PolzaStore; wide:
   const balance = state.account?.balance?.available ?? state.account?.balance?.amount ?? null
   const key = state.account?.key
   const label = state.signedIn ? formatRub(balance) : t('chipSignedOut')
+  const low = state.alert !== null || (state.signedIn && balance !== null && balance < state.prefs.lowBalanceRub)
   return (
     <>
-      <button type="button" className={`pz-chip${wide ? '' : ' narrow'}`} title={t('chipTitle')} onClick={() => { setOpen(true); void store.refresh(true) }}>
+      <button type="button" className={`pz-chip${wide ? '' : ' narrow'}${low ? ' low' : ''}`} title={t('chipTitle')} onClick={() => { setOpen(true); void store.refresh(true) }}>
         <PolzaMark size={16} />
         {wide ? <span className="pz-grow">Polza</span> : null}
         {wide ? <b>{label}</b> : null}
@@ -25,6 +26,7 @@ export function BalanceChip({ t, store, wide }: { t: T; store: PolzaStore; wide:
       <Modal open={open} onClose={() => { setOpen(false) }} title={t('chipTitle')} closeLabel={t('close')}
         footer={<Button variant="primary" onClick={() => { window.open('https://polza.ai/dashboard', '_blank', 'noopener,noreferrer') }}>{t('topUp')}</Button>}>
         <div className="pz-section" style={{ paddingBottom: 0 }}>
+          {state.alert ? <div className="pz-error">{state.alert.message}</div> : low ? <div className="pz-warn">{t('lowBalance')}</div> : null}
           <div className="pz-row">
             <PolzaBadge size={36} />
             <div className="pz-grow">

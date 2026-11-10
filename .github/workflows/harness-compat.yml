@@ -1,0 +1,40 @@
+# Раз в день: вышла ли новая версия DeepSeek Harness (@deepseek-ai/dsh-llm-pi-ai в npm).
+# Если да — ставит пакеты harness этой версии и гоняет типы и тесты. Падение = issue.
+name: harness-compat
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+jobs:
+  compat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Версии harness
+        id: v
+        run: |
+          pinned=$(node -p 'require("./package.json").devDependencies["@deepseek-ai/dsh-llm-pi-ai"]')
+          latest=$(npm view @deepseek-ai/dsh-llm-pi-ai dist-tags.next 2>/dev/null || npm view @deepseek-ai/dsh-llm-pi-ai version)
+          echo "pinned=$pinned" >> "$GITHUB_OUTPUT"; echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          echo "pinned=$pinned latest=$latest"
+      - name: Проверка на новой версии
+        if: steps.v.outputs.latest != steps.v.outputs.pinned
+        run: |
+          npm ci
+          v=${{ steps.v.outputs.latest }}
+          pkgs=$(node -p 'Object.keys(require("./package.json").devDependencies).filter(n=>n.startsWith("@deepseek-ai/dsh-")).map(n=>n+"@'$v'").join(" ")')
+          npm install --no-save --save-exact $pkgs
+          npm run typecheck && npm test && npm run build
+      - name: Issue о несовместимости
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create --title "DeepSeek Harness ${{ steps.v.outputs.latest }}: плагин не собирается" \
+            --body "Проверка harness-compat упала на ${{ steps.v.outputs.latest }} (зафиксирована ${{ steps.v.outputs.pinned }}). Лог: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" || true

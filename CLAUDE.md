@@ -32,6 +32,21 @@
 - Проверка UI без приложения: изолированный `DSH_HOME`, `"$DSH" plugin --profile web add link:…`,
   `POLZA_API_KEY=… "$DSH" web --no-open --port 3417`, открыть напечатанный URL с `?token=`.
 
+## 0.2: расход, служебная модель, деньги, медиа, голос
+- Расход: `PolzaAdapter.wrap` ловит `usage`-чанки всех вызовов маршрута (вкл. prepareCall) по `options.sessionId` →
+  `SpendLedger` (`$DSH_HOME/polza/spend.json`, ₽ по ценам каталога, разбивка по моделям) → `GET /api/polza/spend?session=`;
+  клиент — плашка в `conversation.composer.dock` (опрос 3 с). Заголовки/сжатие в лог сессии usage не пишут — поэтому не projection.
+- Кэш через Пользу проверен 2026-11-10: 2-й ход Claude 93%, GPT 87%, DeepSeek 99% (`cacheReadTokens` в usage).
+- Служебная модель: слушатель `llm/stream` по `purpose` ∈ {session-title, compaction} на маршруте polza →
+  `ctx.llm.stream({...options, model: side})` (копия, WeakSet от рекурсии; titles приходят frozen). Настройка — `$DSH_HOME/polza/settings.json`.
+- Деньги: 402 `INSUFFICIENT_BALANCE` → `src/billing.ts` (баланс vs лимит ключа — только по тексту) → код `QUOTA` и понятный
+  текст; клиент — `shell.quota-notice` (select только при свежем alert Пользы), чип жёлтый при балансе < порога.
+- Медиа: `POST /v1/media` async + опрос; инструменты `src/tools.ts`, файлы в `<cwd>/polza-media`, картинки — ещё и вложением;
+  карточка в чате — `tool.call.toolview` по имени инструмента. Видео seedance-2-mini 4 с 480p ≈ 10 ₽, ~90 с.
+- Голос: `ctx.speechToText.register` (экспериментальный бандл voice-input), вход — WAV 16 кГц моно → `/v1/audio/transcriptions` `ai-sage/gigaam-v3`.
+- Пресеты (`src/presets.ts`) — по реплике прода (`zsh -ic 'ya-psql …'`, polza_ro): чат-модели за 30 дней по числу организаций,
+  только с tools (ФЗ-152 модели Пользы без tools — агенту не годятся).
+
 ## Команды
 - `npm install`, `npm run build` (tsdown → `lib/index.js`, harness-пакеты и pi-ai — peer, zod вбандлен),
   `npm run typecheck` (хост + клиент), `npm test` (vitest; `tests/adapter.test.ts` гоняет настоящий PiAiAdapter против фейкового SSE).
@@ -52,4 +67,5 @@
 - У Ильи в профиле desktop — link на эту папку (не npm-версия).
 
 ## Не сделано
-- Расход в рублях по треду; регистрация `ctx.authorization` flow (в 0.2.2 нет общего UI для него).
+- Расход сабагентов (идут в дочерних сессиях — считаются в их sessionId, в плашке родителя не видны).
+- Регистрация `ctx.authorization` flow (в 0.2.2 нет общего UI для него); тег v0.1.0 на GitHub указывает на коммит до переименования.

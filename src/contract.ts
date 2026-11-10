@@ -6,17 +6,8 @@ export const POLZA_PROVIDER_ID = "polza";
 export const POLZA_DEFAULT_BASE_URL = "https://polza.ai/api";
 export const POLZA_DASHBOARD_URL = "https://polza.ai/dashboard";
 
-/** The models offered after the first sign-in, in picker order. */
-export const POLZA_STARTER_MODELS: readonly string[] = [
-  "anthropic/claude-sonnet-5.5",
-  "anthropic/claude-opus-5.5",
-  "anthropic/claude-haiku-5.5",
-  "openai/gpt-5.4",
-  "google/gemini-3.1-pro-preview",
-  "deepseek/deepseek-v4-pro",
-  "qwen/qwen3-coder-next",
-  "moonshotai/kimi-k3",
-];
+/** Стартовый список моделей — пресет «Популярные» (src/presets.ts). */
+export { STARTER_MODELS as POLZA_STARTER_MODELS } from './presets.ts';
 
 export const polzaModelSlugSchema = z
   .string()
@@ -51,6 +42,8 @@ export interface PolzaCatalogModel {
   fz152Compliant: boolean;
   /** Слаг иконки провайдера на icons.polza.ai. */
   iconSlug: string | null;
+  /** Данные обрабатываются в РФ (модель или её основной провайдер). */
+  storesInRussia: boolean;
 }
 
 const decimalStringSchema = z
@@ -79,6 +72,7 @@ const catalogEntrySchema = z
     context_length: z.number().nullish(),
     max_completion_tokens: z.number().nullish(),
     is_fz152_compliant: z.boolean().catch(false),
+    stores_data_in_russia: z.boolean().catch(false),
     icon_provider_slug: z.string().nullish(),
     reasoning: z
       .object({
@@ -98,6 +92,8 @@ const catalogEntrySchema = z
         supported_parameters: z.array(z.string()).nullish(),
         context_length: z.number().nullish(),
         max_completion_tokens: z.number().nullish(),
+        is_fz152_compliant: z.boolean().nullish(),
+        stores_data_in_russia: z.boolean().nullish(),
       })
       .passthrough()
       .nullish(),
@@ -149,7 +145,8 @@ export function parsePolzaCatalogEntry(raw: unknown): PolzaCatalogModel | null {
     pricing: toPricing(model.top_provider?.pricing),
     inputModalities: model.architecture?.input_modalities ?? ["text"],
     supportsTools: supportedParameters.includes("tools"),
-    fz152Compliant: model.is_fz152_compliant,
+    fz152Compliant: model.is_fz152_compliant || model.top_provider?.is_fz152_compliant === true,
+    storesInRussia: model.stores_data_in_russia || model.top_provider?.stores_data_in_russia === true,
     iconSlug: model.icon_provider_slug ?? null,
   };
 }

@@ -86,3 +86,10 @@ export function toPiModel(model: PolzaCatalogModel, provider: string, baseUrl: s
     compat: polzaCompat(model.id),
   } as Model<Api>
 }
+
+/** Бейдж в пикере: ФЗ-152 важнее «данные в РФ». */
+export function modelBadge(model: PolzaCatalogModel): { text: { en: string; ru: string }; tone: 'success' | 'info' } | undefined {
+  if (model.fz152Compliant) return { text: { en: '152-FZ', ru: 'ФЗ-152' }, tone: 'success' }
+  if (model.storesInRussia) return { text: { en: 'RU', ru: 'РФ' }, tone: 'info' }
+  return undefined
+}

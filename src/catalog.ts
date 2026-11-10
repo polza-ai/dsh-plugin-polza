@@ -111,7 +111,7 @@ export class PolzaCatalogStore {
       const parsed = JSON.parse(await readFile(this.options.cachePath, 'utf8')) as CacheFile
       if (parsed.baseUrl !== this.options.baseUrl || !Array.isArray(parsed.models)) return undefined
       // Кэш старого формата (без иконок) перечитываем из сети.
-      if (parsed.models.some(model => !('iconSlug' in model))) return undefined
+      if (parsed.models.some(model => !('storesInRussia' in model))) return undefined
       return parsed
     } catch {
       return undefined

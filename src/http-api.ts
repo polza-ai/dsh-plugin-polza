@@ -8,6 +8,11 @@ import { describe, displayName, thinkingLevelMap } from './models.ts'
 import { openInBrowser, startLoopbackLogin } from './oauth.ts'
 import type { WhitelistStore } from './whitelist.ts'
 import type { PolzaIconStore } from './icons.ts'
+import { cacheHitRate } from './spend.ts'
+import type { PolzaPrefs, PrefsStore } from './prefs.ts'
+import type { SessionSpend, SpendLedger } from './spend.ts'
+import type { BillingAlert } from './billing.ts'
+import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm'
 
 export const API_PREFIX = '/api/polza'
 const MAX_BODY = 64 * 1024
@@ -21,6 +26,8 @@ export interface PolzaApiDeps {
   catalog: PolzaCatalogStore
   whitelist: WhitelistStore
   icons: PolzaIconStore
+  spend: SpendLedger
+  prefs: PrefsStore
   log: (message: string) => void
 }
 
@@ -34,6 +41,9 @@ export interface CatalogRow {
   contextLength: number | null
   reasoning: boolean
   image: boolean
+  fz152: boolean
+  tools: boolean
+  russia: boolean
   promptRub: number | null
   completionRub: number | null
 }
@@ -48,6 +58,9 @@ function row(model: PolzaCatalogModel): CatalogRow {
     contextLength: model.contextLength,
     reasoning: thinkingLevelMap(model) !== undefined,
     image: model.inputModalities.includes('image'),
+    fz152: model.fz152Compliant,
+    tools: model.supportsTools,
+    russia: model.storesInRussia,
     promptRub: model.pricing?.promptPerMillion ?? null,
     completionRub: model.pricing?.completionPerMillion ?? null,
   }
@@ -60,6 +73,9 @@ export interface PolzaState {
   account: PolzaAccount | null
   models: string[]
   customized: boolean
+  /** Последняя ошибка денег за 30 минут. */
+  alert: BillingAlert | null
+  prefs: PolzaPrefs
 }
 
 function keyHint(key: string): string {
@@ -69,6 +85,24 @@ function keyHint(key: string): string {
 export class PolzaApi {
   private login: { pending: boolean; url: string | null; error: string | null; cancel?: () => void } = { pending: false, url: null, error: null }
   private account: { key: string; at: number; value: PolzaAccount } | undefined
+  private alert: BillingAlert | null = null
+
+  reportBilling(alert: BillingAlert): void {
+    this.alert = alert
+    this.account = undefined
+  }
+
+  reportUsage(options: GenerateOptions, chunk: StreamChunk): void {
+    if (chunk.type !== 'usage' || options.sessionId === undefined) return
+    this.deps.spend.record(String(options.sessionId), options.model, this.deps.catalog.get(options.model), chunk.usage)
+    // Успешный вызов снимает старое предупреждение о деньгах.
+    this.alert = null
+  }
+
+  spendOf(sessionId: string): (SessionSpend & { cacheHitRate: number | null }) | null {
+    const spend = this.deps.spend.get(sessionId)
+    return spend === undefined ? null : { ...spend, cacheHitRate: cacheHitRate(spend.tokens) }
+  }
 
   constructor(private readonly deps: PolzaApiDeps) {}
 
@@ -89,6 +123,8 @@ export class PolzaApi {
       account,
       models: [...this.deps.whitelist.current()],
       customized: this.deps.whitelist.customized(),
+      prefs: this.deps.prefs.current(),
+      alert: this.alert !== null && Date.now() - this.alert.at < 30 * 60_000 ? this.alert : null,
     }
   }
 
@@ -167,6 +203,8 @@ export class PolzaApi {
         this.account = undefined
         return json({ ok: true })
       }) },
+      { path: `${API_PREFIX}/prefs`, methods: ['POST'], fetch: guard(async request => json({ prefs: await this.deps.prefs.update(await body(request) as Partial<PolzaPrefs>) })) },
+      { path: `${API_PREFIX}/spend`, methods: ['GET'], fetch: guard(async request => json({ spend: this.spendOf(new URL(request.url).searchParams.get('session') ?? '') })) },
       { path: `${API_PREFIX}/icons`, methods: ['GET'], fetch: guard(async () => json({ models: await this.pickerIcons() })) },
       { path: `${API_PREFIX}/catalog`, methods: ['GET'], fetch: guard(async () => json({ models: await this.catalogRows() })) },
       { path: `${API_PREFIX}/models`, methods: ['POST'], fetch: guard(async request => json({ models: await this.deps.whitelist.save((await body(request))['models']) })) },

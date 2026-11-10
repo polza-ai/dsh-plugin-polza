@@ -12,6 +12,9 @@ import { BalanceChip, ModelsFooterCard } from './Chip.tsx'
 import { DICTIONARIES, NS } from './locale.ts'
 import type { T } from './locale.ts'
 import { PolzaSection } from './Section.tsx'
+import { SpendPill } from './Spend.tsx'
+import { MediaToolView, QuotaNotice } from './Notices.tsx'
+import { IMAGE_TOOL, VIDEO_TOOL } from '../tool-names.ts'
 
 export const name = 'polza-ui'
 export const inject = ['slots', 'locale']
@@ -66,6 +69,24 @@ export function apply(ctx: Context): void {
     name: 'sidebar.footer.action', id: 'polza-balance', locale: NS,
     inject: () => ({ store }),
   }, BalanceChip as never))
+
+  slots.inject('conversation.composer.dock', () => slots.register({
+    name: 'conversation.composer.dock', id: 'polza-spend', order: 5, locale: NS,
+    inject: (sessionId?: string) => ({ store, sessionId }),
+  }, SpendPill as never))
+
+  slots.inject('shell.quota-notice', () => slots.register({
+    name: 'shell.quota-notice', locale: NS,
+    // Наше уведомление — только когда ошибку денег прислала Польза (иначе это другой провайдер).
+    select: (owner: { code: string }) => owner.code === 'QUOTA' && store.getSnapshot().state?.alert != null ? owner : null,
+    inject: () => ({ store }),
+  }, QuotaNotice as never))
+
+  for (const key of [IMAGE_TOOL, VIDEO_TOOL]) {
+    slots.inject('tool.call.toolview', () => slots.register({
+      name: 'tool.call.toolview', key, locale: NS,
+    }, MediaToolView as never))
+  }
 
   slots.inject('settings.models.footer', () => slots.register({
     name: 'settings.models.footer', id: 'polza', locale: NS,
