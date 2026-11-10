@@ -1,4 +1,4 @@
-# dsh-plugin-polza
+# @polza-ai/dsh-plugin-polza
 
 Модели [polza.ai](https://polza.ai) в [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness):
 провайдер `polza` в пикере моделей и команда `/polza`.
@@ -6,9 +6,9 @@
 ## Установка
 
 ```sh
-dsh plugin --profile desktop add dsh-plugin-polza
+dsh plugin --profile desktop add @polza-ai/dsh-plugin-polza
 ```
-или на странице **Plugins** приложения. Затем перезапустите приложение и откройте
+или в приложении: **Плагины → Добавить плагин** → `@polza-ai/dsh-plugin-polza`. Затем перезапустите приложение и откройте
 **Настройки → Польза** → **Войти через Пользу**.
 
 ## Что появляется

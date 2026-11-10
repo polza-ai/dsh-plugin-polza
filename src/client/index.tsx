@@ -16,7 +16,7 @@ import { PolzaSection } from './Section.tsx'
 export const name = 'polza-ui'
 export const inject = ['slots', 'locale']
 
-const PACKAGE = 'dsh-plugin-polza'
+const PACKAGE = '@polza-ai/dsh-plugin-polza'
 
 export function apply(ctx: Context): void {
   // Типы слотов harness строгие и закрытые; здесь регистрируем через узкий интерфейс.

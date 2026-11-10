@@ -1,8 +1,8 @@
-# Слой бандла dsh-plugin-polza: маршрут `polza` (модели polza.ai) и команда /polza.
+# Слой бандла @polza-ai/dsh-plugin-polza: маршрут `polza` (модели polza.ai) и команда /polza.
 # Белый список моделей переопределяется в ~/.dsh/profiles/<профиль>/cordis.patch.yml:
 #   - id: llm-polza
 #     config:
 #       models: [anthropic/claude-sonnet-5.5, openai/gpt-5.4]
 - insert:
     - id: llm-polza
-      name: dsh-plugin-polza
+      name: '@polza-ai/dsh-plugin-polza'

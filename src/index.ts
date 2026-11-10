@@ -8,12 +8,12 @@
  *
  * ```yaml
  * - id: llm-polza
- *   name: dsh-plugin-polza
+ *   name: '@polza-ai/dsh-plugin-polza'
  *   config:
  *     models: [anthropic/claude-sonnet-5.5, openai/gpt-5.4]
  * ```
  *
- * @module dsh-plugin-polza
+ * @module @polza-ai/dsh-plugin-polza
  */
 import { homedir } from 'node:os'
 import { join } from 'node:path'

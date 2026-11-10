@@ -1,6 +1,6 @@
 # dsh-polza — плагин DeepSeek Harness «Polza» (провайдер polza.ai)
 
-Бандл `dsh-plugin-polza` для DeepSeek Harness (`github.com/deepseek-ai/deepseek-harness`, cordis-плагины):
+Бандл `@polza-ai/dsh-plugin-polza` для DeepSeek Harness (`github.com/deepseek-ai/deepseek-harness`, cordis-плагины):
 маршрут LLM `polza` на Chat Completions Пользы (`https://polza.ai/api/v1`) + команда `/polza`
 (login через OAuth PKCE с коллбэком на 127.0.0.1, key, logout, balance, models, catalog).
 Аналог `~/code/bb-polza` для bb, но без движка: цикл агента — harness, здесь только адаптер.
@@ -38,7 +38,7 @@
 - CLI harness: `DSH="/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh"`.
   Профилем `desktop` управляет только приложение (`--dump-config` для него запрещён).
 - Установка в приложение (сделано 2026-11-10): `"$DSH" plugin --profile desktop add link:/Users/ilya/code/dsh-polza`,
-  после пересборки — перезапуск приложения. Удалить: `"$DSH" plugin --profile desktop remove dsh-plugin-polza`.
+  после пересборки — перезапуск приложения. Удалить: `"$DSH" plugin --profile desktop remove @polza-ai/dsh-plugin-polza`.
 - Смоук без приложения: изолированный `DSH_HOME=<tmp>`, `"$DSH" plugin --profile headless add link:…`, патч
   `- id: agent-default-model\n  config: {provider: polza, model: anthropic/claude-haiku-5.5}`, затем
   `POLZA_API_KEY=… "$DSH" --profile headless --patch <патч> "задача"`.

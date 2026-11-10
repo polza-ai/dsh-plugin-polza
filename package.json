@@ -1,5 +1,5 @@
 {
-  "name": "dsh-plugin-polza",
+  "name": "@polza-ai/dsh-plugin-polza",
   "version": "0.1.0",
   "description": "Polza.ai — российский LLM-агрегатор как провайдер моделей DeepSeek Harness",
   "type": "module",
@@ -115,5 +115,8 @@
   "homepage": "https://github.com/polza-ai/dsh-plugin-polza#readme",
   "bugs": {
     "url": "https://github.com/polza-ai/dsh-plugin-polza/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
