@@ -43,5 +43,13 @@
   `- id: agent-default-model\n  config: {provider: polza, model: anthropic/claude-haiku-5.5}`, затем
   `POLZA_API_KEY=… "$DSH" --profile headless --patch <патч> "задача"`.
 
+## Публикация
+- npm: `@polza-ai/dsh-plugin-polza` (организация polza-ai, `publishConfig.access: public`), GitHub `polza-ai/dsh-plugin-polza`.
+- Релиз: поднять `version`, `npm run typecheck && npm test`, проверить tarball (`npm pack` → изолированный `DSH_HOME`,
+  `"$DSH" plugin --profile web add <tgz>` → `"$DSH" web`), коммит, тег `vX.Y.Z` **до** `npm publish`, push main+тег,
+  `gh release create`. Тег `v0.1.0` на GitHub указывает на коммит до переименования пакета (npm 0.1.0 собран из d01cbdd).
+- Пользователи ставят: Плагины → Добавить плагин → `@polza-ai/dsh-plugin-polza` (собранный пакет, без allowBuilds).
+- У Ильи в профиле desktop — link на эту папку (не npm-версия).
+
 ## Не сделано
 - Расход в рублях по треду; регистрация `ctx.authorization` flow (в 0.2.2 нет общего UI для него).
