@@ -1,0 +1,477 @@
+{
+ "data": [
+  {
+   "reasoning": {
+    "mandatory": true,
+    "supported_efforts": [
+     "high",
+     "medium",
+     "low"
+    ],
+    "default_effort": "medium"
+   },
+   "id": "google/gemini-4-carbon",
+   "object": "model",
+   "owned_by": "polza-ai",
+   "name": "Google: Gemini 4 Carbon",
+   "type": "chat",
+   "short_description": "Модель для программирования, агентных процессов и сложных рассуждений; принимает текст и мультимедийные материалы, отвечая текстом.",
+   "icon_provider_slug": "google",
+   "is_fz152_compliant": false,
+   "stores_data_in_russia": false,
+   "created": 1794330253,
+   "architecture": {
+    "modality": "text+image+file+audio+video->text",
+    "input_modalities": [
+     "audio",
+     "file",
+     "image",
+     "text",
+     "video"
+    ],
+    "output_modalities": [
+     "text"
+    ],
+    "tokenizer": "Gemini",
+    "instruct_type": null
+   },
+   "context_length": 1048576,
+   "max_completion_tokens": 943718,
+   "top_provider": {
+    "reasoning": {
+     "mandatory": true,
+     "supported_efforts": [
+      "high",
+      "medium",
+      "low"
+     ],
+     "default_effort": "medium"
+    },
+    "name": "google-vertex/global",
+    "icon_provider_slug": null,
+    "is_fz152_compliant": false,
+    "stores_data_in_russia": false,
+    "is_hosted_on_polza_infrastructure": false,
+    "is_unofficial": false,
+    "is_moderated": false,
+    "context_length": 1048576,
+    "max_completion_tokens": 943718,
+    "pricing": {
+     "prompt_per_million": "238.43520000",
+     "completion_per_million": "1192.17600000",
+     "image_input_per_million": "238.43520000",
+     "audio_per_million": "238.43520000",
+     "web_search_per_thousand": "1669.04640000",
+     "internal_reasoning_per_million": "1192.17600000",
+     "input_cache_read_per_million": "11.92176000",
+     "input_cache_write_per_million": "22.35330000",
+     "input_audio_cache_per_million": "11.92176000",
+     "currency": "RUB"
+    },
+    "supported_parameters": [
+     "reasoning",
+     "include_reasoning",
+     "max_tokens",
+     "temperature",
+     "top_p",
+     "seed",
+     "response_format",
+     "tools",
+     "tool_choice",
+     "stop",
+     "structured_outputs",
+     "reasoning_effort"
+    ],
+    "default_parameters": {
+     "temperature": null,
+     "top_p": null,
+     "frequency_penalty": null
+    }
+   },
+   "endpoints": [
+    "/api/v1/chat/completions"
+   ]
+  },
+  {
+   "reasoning": {
+    "mandatory": true,
+    "supported_efforts": [
+     "max",
+     "xhigh",
+     "high",
+     "medium",
+     "low"
+    ],
+    "default_effort": "high"
+   },
+   "id": "anthropic/claude-fable-5.2",
+   "object": "model",
+   "owned_by": "polza-ai",
+   "name": "Anthropic: Claude Fable 5.2",
+   "type": "chat",
+   "short_description": "Модель для сложной разработки и исследовательских задач: анализирует код, изображения и документы, помогает создавать решения и координировать работу агентов.",
+   "icon_provider_slug": "anthropic",
+   "is_fz152_compliant": false,
+   "stores_data_in_russia": false,
+   "created": 1794254483,
+   "architecture": {
+    "modality": "text+image+file->text",
+    "input_modalities": [
+     "text",
+     "image",
+     "file"
+    ],
+    "output_modalities": [
+     "text"
+    ],
+    "tokenizer": "Claude",
+    "instruct_type": null
+   },
+   "context_length": 1000000,
+   "max_completion_tokens": 128000,
+   "top_provider": {
+    "reasoning": {
+     "mandatory": true,
+     "supported_efforts": [
+      "max",
+      "xhigh",
+      "high",
+      "medium",
+      "low"
+     ],
+     "default_effort": "high"
+    },
+    "name": "amazon-bedrock",
+    "icon_provider_slug": null,
+    "is_fz152_compliant": false,
+    "stores_data_in_russia": false,
+    "is_hosted_on_polza_infrastructure": false,
+    "is_unofficial": false,
+    "is_moderated": false,
+    "context_length": 1000000,
+    "max_completion_tokens": 128000,
+    "pricing": {
+     "prompt_per_million": "953.74080000",
+     "completion_per_million": "4768.70400000",
+     "web_search_per_thousand": "1192.17600000",
+     "input_cache_read_per_million": "23.84352000",
+     "input_cache_write_per_million": "1192.17600000",
+     "currency": "RUB"
+    },
+    "supported_parameters": [
+     "reasoning",
+     "include_reasoning",
+     "max_tokens",
+     "stop",
+     "tool_choice",
+     "tools",
+     "response_format",
+     "verbosity",
+     "reasoning_effort"
+    ],
+    "default_parameters": {
+     "temperature": null,
+     "top_p": null,
+     "frequency_penalty": null
+    }
+   },
+   "endpoints": [
+    "/api/v1/chat/completions"
+   ]
+  },
+  {
+   "id": "anthropic/claude-sonnet-5.5",
+   "object": "model",
+   "owned_by": "polza-ai",
+   "name": "Anthropic: Claude Sonnet 5.5",
+   "type": "chat",
+   "short_description": "Помогает писать и отлаживать код, разбирать изображения и документы, а также готовить деловые материалы для повседневных задач.",
+   "icon_provider_slug": "anthropic",
+   "is_fz152_compliant": false,
+   "stores_data_in_russia": false,
+   "created": 1790619068,
+   "architecture": {
+    "modality": null,
+    "input_modalities": [
+     "text",
+     "image",
+     "file"
+    ],
+    "output_modalities": [
+     "text"
+    ],
+    "tokenizer": null,
+    "instruct_type": null
+   },
+   "context_length": 1000000,
+   "max_completion_tokens": null,
+   "top_provider": {
+    "name": "gpt-a",
+    "icon_provider_slug": "anthropic",
+    "is_fz152_compliant": false,
+    "stores_data_in_russia": false,
+    "is_hosted_on_polza_infrastructure": false,
+    "is_unofficial": true,
+    "is_moderated": false,
+    "context_length": 1000000,
+    "max_completion_tokens": null,
+    "pricing": {
+     "prompt_per_million": "192.06948840",
+     "completion_per_million": "960.34744200",
+     "input_cache_read_per_million": "9.60347442",
+     "input_cache_write_per_million": "240.08686050",
+     "currency": "RUB"
+    },
+    "supported_parameters": [
+     "tools",
+     "tool_choice",
+     "max_tokens",
+     "reasoning",
+     "reasoning_effort",
+     "parallel_tool_calls"
+    ],
+    "default_parameters": null
+   },
+   "endpoints": [
+    "/api/v1/chat/completions"
+   ]
+  },
+  {
+   "id": "openai/gpt-5.4",
+   "object": "model",
+   "owned_by": "polza-ai",
+   "name": "OpenAI: GPT-5.4",
+   "type": "chat",
+   "short_description": "Универсальная модель для рассуждений, программирования и агентных задач; подходит для анализа материалов и выполнения профессиональных рабочих процессов.",
+   "icon_provider_slug": "openai",
+   "is_fz152_compliant": false,
+   "stores_data_in_russia": false,
+   "created": 1772893607,
+   "architecture": {
+    "modality": "text+image+file->text",
+    "input_modalities": [
+     "text",
+     "image",
+     "file"
+    ],
+    "output_modalities": [
+     "text"
+    ],
+    "tokenizer": "GPT",
+    "instruct_type": null
+   },
+   "context_length": 1050000,
+   "max_completion_tokens": 128000,
+   "top_provider": {
+    "reasoning": {
+     "mandatory": false,
+     "default_enabled": false,
+     "supported_efforts": [
+      "xhigh",
+      "high",
+      "medium",
+      "low",
+      "none"
+     ],
+     "default_effort": "medium"
+    },
+    "name": "openai/flex",
+    "icon_provider_slug": "openai",
+    "is_fz152_compliant": false,
+    "stores_data_in_russia": false,
+    "is_hosted_on_polza_infrastructure": false,
+    "is_unofficial": false,
+    "is_moderated": false,
+    "context_length": 1050000,
+    "max_completion_tokens": 128000,
+    "pricing": {
+     "prompt_per_million": "152.12662500",
+     "completion_per_million": "912.75975000",
+     "web_search_per_thousand": "1217.01300000",
+     "input_cache_read_per_million": "15.21266250",
+     "currency": "RUB"
+    },
+    "supported_parameters": [
+     "reasoning",
+     "include_reasoning",
+     "seed",
+     "max_tokens",
+     "response_format",
+     "structured_outputs",
+     "tools",
+     "tool_choice",
+     "verbosity",
+     "reasoning_effort"
+    ],
+    "default_parameters": {
+     "temperature": null,
+     "top_p": null,
+     "frequency_penalty": null
+    }
+   },
+   "endpoints": [
+    "/api/v1/chat/completions"
+   ]
+  },
+  {
+   "id": "qwen/qwen3-coder-next",
+   "object": "model",
+   "owned_by": "polza-ai",
+   "name": "Qwen: Qwen3 Coder Next",
+   "type": "chat",
+   "short_description": "Текстовая модель для написания и анализа кода, работы с инструментами и длительных задач программирования в агентских и локальных средах разработки.",
+   "icon_provider_slug": "qwen",
+   "is_fz152_compliant": false,
+   "stores_data_in_russia": false,
+   "created": 1770226515,
+   "architecture": {
+    "modality": "text->text",
+    "input_modalities": [
+     "text"
+    ],
+    "output_modalities": [
+     "text"
+    ],
+    "tokenizer": "Qwen",
+    "instruct_type": null
+   },
+   "context_length": 262144,
+   "max_completion_tokens": 235929,
+   "top_provider": {
+    "name": "parasail/bf16",
+    "icon_provider_slug": "qwen",
+    "is_fz152_compliant": false,
+    "stores_data_in_russia": false,
+    "is_hosted_on_polza_infrastructure": false,
+    "is_unofficial": false,
+    "is_moderated": false,
+    "context_length": 262144,
+    "max_completion_tokens": 235929,
+    "pricing": {
+     "prompt_per_million": "14.30611200",
+     "completion_per_million": "95.37408000",
+     "input_cache_read_per_million": "8.34523200",
+     "currency": "RUB"
+    },
+    "supported_parameters": [
+     "max_tokens",
+     "temperature",
+     "top_p",
+     "frequency_penalty",
+     "presence_penalty",
+     "repetition_penalty",
+     "seed",
+     "stop",
+     "top_k",
+     "logit_bias",
+     "response_format",
+     "structured_outputs",
+     "tools",
+     "tool_choice",
+     "logprobs",
+     "top_logprobs"
+    ],
+    "default_parameters": {
+     "temperature": 1,
+     "top_p": 0.95,
+     "frequency_penalty": null
+    }
+   },
+   "endpoints": [
+    "/api/v1/chat/completions"
+   ]
+  },
+  {
+   "reasoning": {
+    "mandatory": false,
+    "default_enabled": true,
+    "supported_efforts": [
+     "max",
+     "xhigh",
+     "high",
+     "medium",
+     "low",
+     "none"
+    ],
+    "default_effort": "medium"
+   },
+   "id": "openai/gpt-6.1-terra",
+   "object": "model",
+   "owned_by": "polza-ai",
+   "name": "OpenAI: GPT-6.1 Terra",
+   "type": "chat",
+   "short_description": "Модель помогает работать с текстом и визуальной информацией, разбираться в содержимом экранов и выполнять компьютерные задачи, а также писать и редактировать материалы.",
+   "icon_provider_slug": "openai",
+   "is_fz152_compliant": false,
+   "stores_data_in_russia": false,
+   "created": 1793043546,
+   "architecture": {
+    "modality": "text+image+file->text",
+    "input_modalities": [
+     "file",
+     "image",
+     "text"
+    ],
+    "output_modalities": [
+     "text"
+    ],
+    "tokenizer": "GPT",
+    "instruct_type": null
+   },
+   "context_length": 1050000,
+   "max_completion_tokens": 128000,
+   "top_provider": {
+    "reasoning": {
+     "mandatory": false,
+     "default_enabled": true,
+     "supported_efforts": [
+      "max",
+      "xhigh",
+      "high",
+      "medium",
+      "low",
+      "none"
+     ],
+     "default_effort": "medium"
+    },
+    "name": "openai/flex",
+    "icon_provider_slug": null,
+    "is_fz152_compliant": false,
+    "stores_data_in_russia": false,
+    "is_hosted_on_polza_infrastructure": false,
+    "is_unofficial": false,
+    "is_moderated": false,
+    "context_length": 1050000,
+    "max_completion_tokens": 128000,
+    "pricing": {
+     "prompt_per_million": "59.60880000",
+     "completion_per_million": "298.04400000",
+     "web_search_per_thousand": "1192.17600000",
+     "input_cache_read_per_million": "2.98044000",
+     "input_cache_write_per_million": "74.51100000",
+     "currency": "RUB"
+    },
+    "supported_parameters": [
+     "reasoning",
+     "include_reasoning",
+     "seed",
+     "max_tokens",
+     "response_format",
+     "structured_outputs",
+     "tools",
+     "tool_choice",
+     "verbosity",
+     "reasoning_effort"
+    ],
+    "default_parameters": {
+     "temperature": null,
+     "top_p": null,
+     "frequency_penalty": null
+    }
+   },
+   "endpoints": [
+    "/api/v1/chat/completions"
+   ]
+  }
+ ]
+}

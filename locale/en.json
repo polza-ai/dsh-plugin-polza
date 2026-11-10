@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Polza",
+    "description": "Run the agent on polza.ai models: 290+ chat models from Anthropic, OpenAI, Google, DeepSeek, Qwen and others with ruble billing. Sign in with your Polza account, pick the models for the picker, and watch the balance and key limit.",
+    "detail": "docs/DETAIL.md"
+  }
+}
