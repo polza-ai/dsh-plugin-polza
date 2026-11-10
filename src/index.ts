@@ -271,6 +271,7 @@ export function apply(ctx: Context, config: Config): void {
         return key
       },
       attachments: () => services.attachments,
+      recordCost: (sessionId, model, rub) => { spend.recordCost(sessionId, model, rub) },
     })
   })
 

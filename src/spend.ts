@@ -97,6 +97,23 @@ export class SpendLedger {
     this.scheduleSave()
   }
 
+  /** Готовая сумма (генерация картинки/видео): токенов нет, цену прислала Польза. */
+  recordCost(sessionId: string, modelId: string, rub: number): void {
+    const current = this.sessions.get(sessionId) ?? {
+      rub: 0, calls: 0, tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }, lastRub: 0, lastModel: null, unpriced: 0, updatedAt: 0,
+    }
+    this.sessions.delete(sessionId)
+    this.sessions.set(sessionId, {
+      ...current,
+      rub: current.rub + rub,
+      lastRub: rub,
+      lastModel: modelId,
+      updatedAt: Date.now(),
+      models: { ...current.models, [modelId]: { calls: (current.models?.[modelId]?.calls ?? 0) + 1, rub: (current.models?.[modelId]?.rub ?? 0) + rub } },
+    })
+    this.scheduleSave()
+  }
+
   private scheduleSave(): void {
     clearTimeout(this.timer)
     this.timer = setTimeout(() => { void this.save() }, SAVE_DELAY_MS)

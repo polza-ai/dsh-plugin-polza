@@ -43,6 +43,7 @@ export interface CatalogRow {
   image: boolean
   fz152: boolean
   tools: boolean
+  icon: string
   russia: boolean
   promptRub: number | null
   completionRub: number | null
@@ -52,7 +53,7 @@ function row(model: PolzaCatalogModel): CatalogRow {
   return {
     id: model.id,
     name: displayName(model),
-    vendor: model.name.match(/^([^:]{1,40}):/u)?.[1]?.trim() ?? model.vendor,
+    vendor: model.name.match(/^([^:]{1,40}):/u)?.[1]?.trim() ?? (model.vendor.charAt(0).toUpperCase() + model.vendor.slice(1)),
     description: describe(model),
     shortDescription: model.shortDescription,
     contextLength: model.contextLength,
@@ -60,6 +61,7 @@ function row(model: PolzaCatalogModel): CatalogRow {
     image: model.inputModalities.includes('image'),
     fz152: model.fz152Compliant,
     tools: model.supportsTools,
+    icon: model.iconSlug ?? model.vendor,
     russia: model.storesInRussia,
     promptRub: model.pricing?.promptPerMillion ?? null,
     completionRub: model.pricing?.completionPerMillion ?? null,
@@ -168,7 +170,7 @@ export class PolzaApi {
       const model = this.deps.catalog.get(id)
       const slug = model?.iconSlug ?? id.split('/')[0]
       if (slug === undefined) return
-      const svg = await this.deps.icons.get(slug, { rememberMiss: model?.iconSlug != null })
+      const svg = await this.deps.icons.resolve(slug, { rememberMiss: model?.iconSlug != null })
       if (svg !== undefined) out[id] = svg
     }))
     return out
@@ -205,6 +207,12 @@ export class PolzaApi {
       }) },
       { path: `${API_PREFIX}/prefs`, methods: ['POST'], fetch: guard(async request => json({ prefs: await this.deps.prefs.update(await body(request) as Partial<PolzaPrefs>) })) },
       { path: `${API_PREFIX}/spend`, methods: ['GET'], fetch: guard(async request => json({ spend: this.spendOf(new URL(request.url).searchParams.get('session') ?? '') })) },
+      { path: `${API_PREFIX}/icon`, methods: ['GET'], fetch: guard(async (request) => {
+        const svg = await this.deps.icons.resolve(new URL(request.url).searchParams.get('slug') ?? '')
+        return svg === undefined
+          ? new Response('', { status: 404 })
+          : new Response(svg, { status: 200, headers: { 'content-type': 'image/svg+xml', 'cache-control': 'private, max-age=86400' } })
+      }) },
       { path: `${API_PREFIX}/icons`, methods: ['GET'], fetch: guard(async () => json({ models: await this.pickerIcons() })) },
       { path: `${API_PREFIX}/catalog`, methods: ['GET'], fetch: guard(async () => json({ models: await this.catalogRows() })) },
       { path: `${API_PREFIX}/models`, methods: ['POST'], fetch: guard(async request => json({ models: await this.deps.whitelist.save((await body(request))['models']) })) },

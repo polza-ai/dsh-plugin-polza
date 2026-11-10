@@ -64,11 +64,13 @@ export function MediaToolView({ t, phase, toolName, block, loadImage, openFile }
   const prompt = promptOf(block)
   if (phase !== 'result') {
     return (
-      <div className="pz-media pz-row">
-        <span className="pz-spinner" />
-        <div className="pz-grow">
-          <div className="pz-title">{video ? t('genVideo') : t('genImage')}</div>
-          {prompt ? <div className="pz-muted pz-ellipsis">{prompt}</div> : null}
+      <div className="pz-media">
+        <div className="pz-media-head">
+          <span className="pz-spinner" />
+          <div className="pz-grow">
+            <div className="pz-title">{video ? t('genVideo') : t('genImage')}</div>
+            {prompt ? <div className="pz-muted pz-ellipsis">{prompt}</div> : null}
+          </div>
         </div>
       </div>
     )
@@ -82,9 +84,9 @@ export function MediaToolView({ t, phase, toolName, block, loadImage, openFile }
   return (
     <div className="pz-media">
       {images.length > 0 ? <div className="pz-thumbs">{images.map(image => <Thumb key={image.attachmentId} image={image} loadImage={loadImage} />)}</div> : null}
-      <div className="pz-row" style={{ flexWrap: 'wrap' }}>
+      <div className="pz-media-head">
         <span className="pz-muted pz-grow pz-ellipsis">{prompt}</span>
-        {meta.model ? <span className="pz-dim">{meta.model}</span> : null}
+        {meta.model ? <span className="pz-dim" style={{ flex: 'none' }}>{meta.model}</span> : null}
       </div>
       <div className="pz-row" style={{ flexWrap: 'wrap' }}>
         {(meta.files ?? []).map(file => (

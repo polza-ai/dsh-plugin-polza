@@ -17,6 +17,8 @@ export interface ToolDeps {
   baseUrl: string
   apiKey: () => Promise<string>
   attachments: () => Context['attachments'] | undefined
+  /** Учесть стоимость генерации в расходе сессии. */
+  recordCost: (sessionId: string, model: string, rub: number) => void
 }
 
 const IMAGE_TYPES: Record<string, ImageMediaType> = { png: 'image/png', jpeg: 'image/jpeg', jpg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif' }
@@ -154,6 +156,7 @@ export function registerMediaTools(ctx: Context, deps: ToolDeps): void {
         },
       })
       if (result.urls.length === 0) throw new Error(`модель ${model} не вернула картинок${result.text ? `: ${result.text}` : ''}`)
+      if (result.costRub != null && exec.agent) deps.recordCost(String(exec.agent.id), model, result.costRub)
       const saved = await save('image', args.prompt, model, result.urls, dir, exec.signal)
       return { ...saved, ...result.costRub == null ? {} : { costRub: result.costRub }, ...result.warnings.length ? { warnings: result.warnings } : {} }
     },
@@ -189,6 +192,7 @@ export function registerMediaTools(ctx: Context, deps: ToolDeps): void {
         },
       })
       if (result.urls.length === 0) throw new Error(`модель ${model} не вернула видео`)
+      if (result.costRub != null && exec.agent) deps.recordCost(String(exec.agent.id), model, result.costRub)
       const saved = await save('video', args.prompt, model, result.urls, dir, exec.signal)
       return { ...saved, ...result.costRub == null ? {} : { costRub: result.costRub }, ...result.warnings.length ? { warnings: result.warnings } : {} }
     },

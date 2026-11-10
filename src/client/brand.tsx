@@ -57,6 +57,13 @@ export const CSS = `
 .pz-chip b{color:var(--dsw-alias-label-primary);font-weight:500}
 .pz-chip.narrow{width:auto;justify-content:center}
 .pz-input{flex:1}
+.pz-provider-icon{display:inline-block;flex:none;background:currentColor;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain;color:var(--dsw-alias-label-secondary)}
+.pz-media-head{display:flex;align-items:center;gap:10px;min-width:0}
+.pz-media-head>.pz-grow{min-width:0;flex:1}
+.pz-ellipsis{display:block;max-width:100%}
+.pz-tags{flex-wrap:wrap;row-gap:4px}
+.pz-name{white-space:nowrap}
+.pz-filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .pz-warn{color:var(--dsw-alias-state-warn-label);font:var(--dsw-font-xs-13)}
 .pz-chip.low,.pz-chip.low b{color:var(--dsw-alias-state-warn-label)}
 .pz-pill{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border-radius:12px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);font:var(--dsw-font-xxs-12);white-space:nowrap;cursor:default}
@@ -106,4 +113,10 @@ export function pickerIconsCss(icons: Record<string, string>): string {
     return `${sel}{display:inline-flex;align-items:center;gap:6px}`
       + `${sel}::before{content:"";flex:none;width:14px;height:14px;background:currentColor;-webkit-mask:${uri} center/contain no-repeat;mask:${uri} center/contain no-repeat}`
   }).join('\n')
+}
+
+/** Иконка провайдера модели (моно-SVG с CDN Пользы через хост), цвет — текущий цвет текста. */
+export function ProviderIcon({ slug, size = 16 }: { slug: string; size?: number }) {
+  const url = `url("${new URL(`api/polza/icon?slug=${encodeURIComponent(slug)}`, document.baseURI).href}")`
+  return <span className="pz-provider-icon" aria-hidden="true" style={{ width: size, height: size, WebkitMaskImage: url, maskImage: url }} />
 }

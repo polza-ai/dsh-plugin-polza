@@ -8,7 +8,36 @@ const MAX_BYTES = 64 * 1024
 const SLUG = /^[a-z0-9][a-z0-9._-]{0,63}$/u
 const MISS_RETRY_MS = 6 * 3_600_000
 
+/**
+ * Слаг автора модели → слаг иконки на CDN (как getAiIconProvider на сайте Пользы, POLZA-1131),
+ * плюс авторы, которых нет в таблице сайта.
+ */
+export const ICON_ALIASES: Record<string, string> = {
+  moonshotai: 'moonshot',
+  'arcee-ai': 'arcee',
+  'black-forest-labs': 'bfl',
+  'bytedance-seed': 'bytedance',
+  'ibm-granite': 'ibm',
+  topaz: 'topazlabs',
+  xiaomi: 'xiaomimimo',
+  'inference-net': 'inference',
+  'tongyi-mai': 'alibaba',
+  'z-ai': 'zai',
+  amazon: 'nova',
+  'aion-labs': 'aionlabs',
+  rekaai: 'reka',
+  'x-ai': 'xai',
+}
+
 export class PolzaIconStore {
+  /** Точное совпадение слага, затем алиас. */
+  async resolve(slug: string, options: { rememberMiss?: boolean } = {}): Promise<string | undefined> {
+    const exact = await this.get(slug, options)
+    if (exact !== undefined) return exact
+    const alias = ICON_ALIASES[slug]
+    return alias === undefined ? undefined : this.get(alias, options)
+  }
+
   private readonly memory = new Map<string, string>()
   private readonly misses = new Map<string, number>()
   private readonly pending = new Map<string, Promise<string | undefined>>()

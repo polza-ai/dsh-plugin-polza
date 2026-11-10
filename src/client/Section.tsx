@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { Button, Input, Tag } from '@deepseek-ai/dsh-client-ui-primitives'
 import { formatRub } from './api.ts'
 import type { CatalogRow, PolzaState, PolzaStore } from './api.ts'
-import { PolzaBadge } from './brand.tsx'
+import { PolzaBadge, ProviderIcon } from './brand.tsx'
 import { resetLabel } from './locale.ts'
 import { MODEL_PRESETS } from '../presets.ts'
 import type { T } from './locale.ts'
@@ -162,6 +162,7 @@ function ModelsEditor({ t, store, state }: { t: T; store: PolzaStore; state: Pol
               return (
                 <div className="pz-item" key={id}>
                   <span className="pz-num">{index + 1}</span>
+                  <ProviderIcon slug={row?.icon ?? id.split('/')[0] ?? ''} size={18} />
                   <div className="pz-grow">
                     <div className="pz-row">
                       <span className="pz-title">{row?.name ?? id}</span>
@@ -187,8 +188,8 @@ function ModelsEditor({ t, store, state }: { t: T; store: PolzaStore; state: Pol
           </Button>
         ))}
       </div>
-      <div className="pz-row">
-        <Input className="pz-input" placeholder={t('search')} value={query} onChange={(event) => { setQuery(event.target.value) }} />
+      <Input placeholder={t('search')} value={query} onChange={(event) => { setQuery(event.target.value) }} />
+      <div className="pz-filters">
         <select className="pz-select" value={vendor} onChange={(event) => { setVendor(event.target.value) }}>
           <option value="">{t('allVendors')}</option>
           {vendors.map(name => <option key={name} value={name}>{name}</option>)}
@@ -197,15 +198,16 @@ function ModelsEditor({ t, store, state }: { t: T; store: PolzaStore; state: Pol
           <input type="checkbox" className="pz-check" checked={onlyRu} onChange={(event) => { setOnlyRu(event.target.checked) }} />
           {t('onlyFz')}
         </label>
-        <span className="pz-dim">{t('count', { count: filtered.length })}</span>
+        <span className="pz-dim" style={{ marginLeft: 'auto', whiteSpace: 'nowrap' }}>{t('count', { count: filtered.length })}</span>
       </div>
       <div className="pz-list pz-scroll">
         {filtered.slice(0, 300).map(row => (
           <label className="pz-item" key={row.id} style={{ cursor: 'pointer' }}>
             <input type="checkbox" className="pz-check" checked={selection.includes(row.id)} aria-label={row.name} onChange={(event) => { toggle(row.id, event.target.checked) }} />
+            <ProviderIcon slug={row.icon} size={18} />
             <div className="pz-grow">
-              <div className="pz-row">
-                <span>{row.vendor}: {row.name}</span>
+              <div className="pz-row pz-tags">
+                <span className="pz-name">{row.name.startsWith(`${row.vendor}:`) ? row.name : `${row.vendor}: ${row.name}`}</span>
                 {row.reasoning ? <Tag tone="quiet">{t('reasoning')}</Tag> : null}
                 {row.image ? <Tag tone="quiet">{t('vision')}</Tag> : null}
                 {row.tools ? null : <Tag tone="warning">{t('noTools')}</Tag>}
@@ -231,12 +233,12 @@ function PrefsCard({ t, store, state }: { t: T; store: PolzaStore; state: PolzaS
   }, [catalog, state.prefs.sideModel])
   return (
     <div className="pz-card">
-      <div className="pz-row">
-        <div className="pz-grow">
-          <div className="pz-title">{t('sideModel')}</div>
-          <div className="pz-muted">{t('sideModelHint')}</div>
-        </div>
-        <select className="pz-select" style={{ maxWidth: 320 }} value={state.prefs.sideModel ?? ''}
+      <div>
+        <div className="pz-title">{t('sideModel')}</div>
+        <div className="pz-muted">{t('sideModelHint')}</div>
+      </div>
+      <div>
+        <select className="pz-select" style={{ width: '100%' }} value={state.prefs.sideModel ?? ''}
           onChange={(event) => { void store.savePrefs({ sideModel: event.target.value === '' ? null : event.target.value }) }}>
           <option value="">{t('sideSame')}</option>
           {options.map(row => <option key={row.id} value={row.id}>{row.vendor ? `${row.vendor}: ` : ''}{row.name}{price(row) ? ` · ${price(row)}` : ''}</option>)}

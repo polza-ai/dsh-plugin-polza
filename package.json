@@ -1,6 +1,6 @@
 {
   "name": "@polza-ai/dsh-plugin-polza",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Polza.ai — российский LLM-агрегатор как провайдер моделей DeepSeek Harness",
   "type": "module",
   "license": "MIT",
@@ -10,7 +10,8 @@
     "./package.json": "./package.json",
     "./locale/*.json": "./locale/*.json",
     "./icon": "./icon.svg",
-    "./client": "./lib/client.js"
+    "./client": "./lib/client.js",
+    "./docs/*": "./docs/*"
   },
   "files": [
     "lib",
@@ -19,7 +20,9 @@
     "icon.svg",
     "assets",
     "locale",
-    "docs"
+    "docs/DETAIL.md",
+    "docs/DETAIL.ru.md",
+    "docs/screenshots"
   ],
   "engines": {
     "dsh": ">=0.2.2-rc.1 <0.3.0"
