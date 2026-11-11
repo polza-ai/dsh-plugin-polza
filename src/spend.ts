@@ -1,7 +1,7 @@
 // Расход в рублях по сессиям harness: токены каждого вызова маршрута polza × цены каталога.
 // Это оценка (биллинг Пользы — в её кабинете). Хранится в $DSH_HOME/polza/spend.json.
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
+import { readFile } from 'node:fs/promises'
+import { writeFileAtomic } from './atomic.ts'
 import type { PolzaCatalogModel } from './contract.ts'
 
 export interface TokenTotals {
@@ -122,10 +122,7 @@ export class SpendLedger {
   async save(): Promise<void> {
     clearTimeout(this.timer)
     try {
-      await mkdir(dirname(this.path), { recursive: true })
-      const tmp = `${this.path}.${process.pid}.tmp`
-      await writeFile(tmp, JSON.stringify(Object.fromEntries(this.sessions)))
-      await rename(tmp, this.path)
+      await writeFileAtomic(this.path, JSON.stringify(Object.fromEntries(this.sessions)))
     } catch (error) {
       this.onError(error)
     }

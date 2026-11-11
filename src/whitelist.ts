@@ -1,7 +1,7 @@
 // Белый список моделей пикера: файл $DSH_HOME/polza/models.json, правится из UI.
 // Пока файла нет, действует поле `models` конфигурации (стартовый набор).
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
+import { readFile } from 'node:fs/promises'
+import { writeFileAtomic } from './atomic.ts'
 import { polzaModelSlugSchema } from './contract.ts'
 
 const MAX_MODELS = 200
@@ -44,10 +44,7 @@ export class WhitelistStore {
 
   async save(models: unknown): Promise<readonly string[]> {
     const next = Object.freeze(normalizeWhitelist(models))
-    await mkdir(dirname(this.path), { recursive: true })
-    const tmp = `${this.path}.${process.pid}.tmp`
-    await writeFile(tmp, `${JSON.stringify(next, null, 2)}\n`)
-    await rename(tmp, this.path)
+    await writeFileAtomic(this.path, `${JSON.stringify(next, null, 2)}\n`)
     this.stored = next
     this.onChange()
     return next

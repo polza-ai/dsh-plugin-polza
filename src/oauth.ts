@@ -139,15 +139,19 @@ export async function startLoopbackLogin(options: {
   return { url: authorizeUrl(options.baseUrl, pkce, callbackUrl, options.appName), key, close }
 }
 
+/** Команда открытия URL. На Windows не `cmd /c start`: cmd режет URL по `&`
+ *  и Польза получает только `?response_type=code`. */
+export function browserCommand(url: string, platform: NodeJS.Platform = process.platform): [string, string[]] {
+  if (platform === 'darwin') return ['open', [url]]
+  if (platform === 'win32') return ['rundll32', ['url.dll,FileProtocolHandler', url]]
+  return ['xdg-open', [url]]
+}
+
 /** Открыть URL в системном браузере; ошибку глотаем — URL всё равно показан. */
 export function openInBrowser(url: string): void {
-  const [command, args] = process.platform === 'darwin'
-    ? ['open', [url]]
-    : process.platform === 'win32'
-      ? ['cmd', ['/c', 'start', '', url]]
-      : ['xdg-open', [url]]
+  const [command, args] = browserCommand(url)
   try {
-    const child = spawn(command, args as string[], { stdio: 'ignore', detached: true })
+    const child = spawn(command, args, { stdio: 'ignore', detached: true, windowsHide: true })
     child.on('error', () => {})
     child.unref()
   } catch {

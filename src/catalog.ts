@@ -1,7 +1,7 @@
 // Каталог чат-моделей Пользы: публичный GET {base}/v1/models?type=chat.
 // Последний удачный ответ лежит на диске, чтобы пикер не ждал сеть при старте.
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
+import { readFile } from 'node:fs/promises'
+import { writeFileAtomic } from './atomic.ts'
 import { parsePolzaCatalog } from './contract.ts'
 import type { PolzaCatalogModel } from './contract.ts'
 
@@ -122,11 +122,8 @@ export class PolzaCatalogStore {
     const path = this.options.cachePath
     if (path === undefined) return
     try {
-      await mkdir(dirname(path), { recursive: true })
       const body: CacheFile = { baseUrl: this.options.baseUrl, fetchedAt: new Date(this.now()).toISOString(), models: [...models] }
-      const tmp = `${path}.${process.pid}.tmp`
-      await writeFile(tmp, JSON.stringify(body))
-      await rename(tmp, path)
+      await writeFileAtomic(path, JSON.stringify(body))
     } catch (error) {
       this.options.onError?.(error)
     }

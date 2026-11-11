@@ -91,7 +91,7 @@ export function MediaToolView({ t, phase, toolName, block, loadImage, openFile }
       <div className="pz-row" style={{ flexWrap: 'wrap' }}>
         {(meta.files ?? []).map(file => (
           <Button key={file} variant="outline" size="sm" onClick={() => { openFile(file) }}>
-            {video ? t('openVideo') : t('openFile')} · {file.split('/').pop()}
+            {video ? t('openVideo') : t('openFile')} · {file.split(/[\\/]/u).pop()}
           </Button>
         ))}
       </div>

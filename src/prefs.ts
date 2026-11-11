@@ -1,6 +1,6 @@
 // Настройки плагина из UI: $DSH_HOME/polza/settings.json.
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
+import { readFile } from 'node:fs/promises'
+import { writeFileAtomic } from './atomic.ts'
 import { polzaModelSlugSchema } from './contract.ts'
 
 export const DEFAULT_SIDE_MODEL = 'deepseek/deepseek-v4.1-flash-1017'
@@ -27,10 +27,7 @@ export class PrefsStore {
 
   async update(patch: Partial<PolzaPrefs>): Promise<PolzaPrefs> {
     const next = normalize({ ...this.value, ...patch })
-    await mkdir(dirname(this.path), { recursive: true })
-    const tmp = `${this.path}.${process.pid}.tmp`
-    await writeFile(tmp, `${JSON.stringify(next, null, 2)}\n`)
-    await rename(tmp, this.path)
+    await writeFileAtomic(this.path, `${JSON.stringify(next, null, 2)}\n`)
     this.value = next
     return next
   }
