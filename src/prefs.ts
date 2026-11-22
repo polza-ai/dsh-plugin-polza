@@ -6,6 +6,7 @@ import { polzaModelSlugSchema } from './contract.ts'
 export const DEFAULT_SIDE_MODEL = 'deepseek/deepseek-v4.1-flash-1017'
 
 export interface PolzaPrefs {
+  autoUpdate: boolean
   /** Модель для заголовков сессий и сжатия контекста; null — та же, что у разговора. */
   sideModel: string | null
   /** Порог «мало денег» в рублях для предупреждения. */
@@ -14,7 +15,7 @@ export interface PolzaPrefs {
   modelProviders: Record<string, readonly string[]>
 }
 
-const DEFAULTS: PolzaPrefs = { sideModel: DEFAULT_SIDE_MODEL, lowBalanceRub: 50, modelProviders: {} }
+const DEFAULTS: PolzaPrefs = { autoUpdate: true, sideModel: DEFAULT_SIDE_MODEL, lowBalanceRub: 50, modelProviders: {} }
 
 export class PrefsStore {
   private value: PolzaPrefs = { ...DEFAULTS }
@@ -71,6 +72,7 @@ function normalize(raw: Record<string, unknown>): PolzaPrefs {
     }))
     : {}
   return {
+    autoUpdate: typeof raw['autoUpdate'] === 'boolean' ? raw['autoUpdate'] : DEFAULTS.autoUpdate,
     modelProviders,
     sideModel: side === null || side === '' ? null : polzaModelSlugSchema.safeParse(side).success ? side as string : DEFAULTS.sideModel,
     lowBalanceRub: typeof low === 'number' && Number.isFinite(low) && low >= 0 ? low : DEFAULTS.lowBalanceRub,

@@ -166,7 +166,6 @@ function ModelsEditor({ t, store, state }: { t: T; store: PolzaStore; state: Pol
                   <div className="pz-grow">
                     <div className="pz-row">
                       <span className="pz-title">{row?.name ?? id}</span>
-                      {index === 0 ? <Tag tone="neutral">{t('default')}</Tag> : null}
                       {row?.fz152 ? <Tag tone="success">{t('fz152')}</Tag> : row?.russia ? <Tag tone="info">{t('russia')}</Tag> : null}
                     </div>
                     <div className="pz-dim">{id}{row ? ` · ${price(row)}` : catalog.length > 0 ? ` · ${t('missing')}` : ''}</div>
@@ -259,6 +258,42 @@ function PrefsCard({ t, store, state }: { t: T; store: PolzaStore; state: PolzaS
   )
 }
 
+function UpdatesCard({ t, store, state }: { t: T; store: PolzaStore; state: PolzaState }) {
+  const [saving, setSaving] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const save = async (autoUpdate: boolean) => {
+    setSaving(true)
+    setError(null)
+    try { await store.savePrefs({ autoUpdate }) } catch { setError(t('autoUpdateSaveError')) } finally { setSaving(false) }
+  }
+  const check = async () => {
+    setChecking(true)
+    setError(null)
+    try { await store.checkUpdates() } catch { setError(t('update_error')) } finally { setChecking(false) }
+  }
+  const status = checking ? 'checking' : state.updateStatus
+  return (
+    <div className="pz-card">
+      <label className="pz-row">
+        <span className="pz-grow">
+          <span className="pz-title">{t('autoUpdate')}</span>
+          <br />
+          <span className="pz-muted">{t('autoUpdateHint')}</span>
+        </span>
+        <input type="checkbox" className="pz-check" aria-label={t('autoUpdate')} checked={state.prefs.autoUpdate}
+          disabled={saving} onChange={event => { void save(event.target.checked) }} />
+      </label>
+      <div className="pz-row" style={{ flexWrap: 'wrap' }}>
+        <Button variant="outline" disabled={status === 'checking'} onClick={() => { void check() }}>{t('checkUpdates')}</Button>
+        {status === 'idle' ? null
+          : <span className="pz-muted" role="status">{t(`update_${status}`, { version: state.updateVersion ?? '' })}</span>}
+      </div>
+      {error ? <div className="pz-error" role="alert">{error}</div> : null}
+    </div>
+  )
+}
+
 export function PolzaSection({ t, store }: { t: T; store: PolzaStore }) {
   const { state, loading, error } = useStore(store)
   return (
@@ -274,6 +309,7 @@ export function PolzaSection({ t, store }: { t: T; store: PolzaStore }) {
       {loading && state === null ? null : state?.signedIn ? <AccountCard t={t} store={store} state={state} /> : <SignedOut t={t} store={store} state={state} />}
       {state ? <ModelsEditor t={t} store={store} state={state} /> : null}
       {state ? <PrefsCard t={t} store={store} state={state} /> : null}
+      {state ? <UpdatesCard t={t} store={store} state={state} /> : null}
       <div className="pz-dim">{t('footer')}</div>
     </div>
   )

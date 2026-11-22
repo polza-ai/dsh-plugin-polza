@@ -1,7 +1,6 @@
 // Команда /polza: вход, ключ, выход, баланс, модели, поиск по каталогу.
 import type { Context } from '@deepseek-ai/cordis'
 import type { CommandResult } from '@deepseek-ai/dsh-commands'
-import type { CredentialRef } from '@deepseek-ai/dsh-credentials'
 import { fetchPolzaAccount, formatAccount } from './account.ts'
 import type { PolzaCatalogStore } from './catalog.ts'
 import { formatPolzaPriceLabel } from './contract.ts'
@@ -10,13 +9,12 @@ import { openInBrowser, startLoopbackLogin } from './oauth.ts'
 
 export interface PolzaCommandDeps {
   baseUrl: string
-  keyRef: CredentialRef
-  keyName: string
-  credentials: () => Context['credentials'] | undefined
+  keyName: () => string
   currentKey: () => Promise<string | undefined>
+  saveKey: (key: string) => Promise<void>
+  removeKey: () => Promise<void>
   whitelist: () => readonly string[]
   catalog: PolzaCatalogStore
-  onKeyChanged: () => void
 }
 
 const HELP = [
@@ -38,42 +36,30 @@ function line(model: PolzaCatalogModel): string {
 }
 
 export function registerPolzaCommand(ctx: Context, deps: PolzaCommandDeps): void {
-  const credentials = () => {
-    const service = deps.credentials()
-    if (service === undefined) throw new Error('в этой сборке нет хранилища учётных данных')
-    return service
-  }
-
-  const saveKey = async (key: string): Promise<void> => {
-    await credentials().set(deps.keyRef, key)
-    deps.onKeyChanged()
-  }
-
   const handlers: Record<string, (rest: string, signal: AbortSignal) => Promise<CommandResult>> = {
     async login(_rest, signal) {
       const login = await startLoopbackLogin({ baseUrl: deps.baseUrl, appName: 'DeepSeek Harness', signal })
       openInBrowser(login.url)
       ctx.logger.info(`[dsh-plugin-polza] вход: ${login.url}`)
       try {
-        await saveKey(await login.key)
+        await deps.saveKey(await login.key)
       } finally {
         login.close()
       }
       const account = await fetchPolzaAccount(deps.baseUrl, (await deps.currentKey()) ?? '')
-      return ok(`Вход выполнен, ключ сохранён в ${deps.keyName}. Модели Polza появились в пикере.\n${formatAccount(account)}`)
+      return ok(`Вход выполнен, ключ сохранён в ${deps.keyName()}. Модели Polza появились в пикере.\n${formatAccount(account)}`)
     },
 
     async key(rest) {
       const key = rest.trim()
       if (!/^pza_[A-Za-z0-9_-]{8,}$/u.test(key)) return fail('Ожидался ключ вида pza_… (polza.ai → Ключи API)')
-      await saveKey(key)
-      return ok(`Ключ сохранён в ${deps.keyName}.`)
+      await deps.saveKey(key)
+      return ok(`Ключ сохранён в ${deps.keyName()}.`)
     },
 
     async logout() {
-      await credentials().unset(deps.keyRef)
-      deps.onKeyChanged()
-      return ok(`Ключ ${deps.keyName} удалён из хранилища harness. Если он задан в окружении или .env — уберите и там.`)
+      await deps.removeKey()
+      return ok(`Ключ ${deps.keyName()} удалён из хранилища harness. Если он задан в окружении или .env — уберите и там.`)
     },
 
     async balance() {

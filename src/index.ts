@@ -19,6 +19,8 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/cordis-plugin-loader'
+import type {} from '@deepseek-ai/dsh-agent-default-model'
+import type {} from '@deepseek-ai/dsh-settings'
 import z from '@deepseek-ai/schemastery'
 import { assertUsableApiKey, LlmError, resolveImageAttachmentAccess } from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, LlmModelInfo, PreparedAdapterCall, StreamChunk } from '@deepseek-ai/dsh-llm'
@@ -43,6 +45,8 @@ import { PolzaApi } from './http-api.ts'
 import { PolzaIconStore } from './icons.ts'
 import { SpendLedger } from './spend.ts'
 import { PrefsStore } from './prefs.ts'
+import { updatePolza } from './startup-update.ts'
+import type { UpdateResult } from './startup-update.ts'
 import { registerMediaTools } from './tools.ts'
 import { transcribe } from './media.ts'
 import { brandString } from '@deepseek-ai/dsh-brand'
@@ -55,7 +59,7 @@ export const inject = ['llm']
 
 export interface Config {
   baseURL: string
-  apiKeyEnv: string
+  apiKeyEnv: import('@deepseek-ai/cordis').Volatile<string>
   models: import('@deepseek-ai/cordis').Volatile<string[]>
   catalogTtlHours: number
 }
@@ -63,7 +67,7 @@ export interface Config {
 export const Config: z<Config> = z.object({
   baseURL: z.string().default(POLZA_DEFAULT_BASE_URL)
     .description('Корень API Пользы; инференс идёт в {baseURL}/v1, вход — в {baseURL}/auth.'),
-  apiKeyEnv: z.string().default('POLZA_API_KEY')
+  apiKeyEnv: z.string().default('POLZA_API_KEY').volatile()
     .description('Имя учётных данных с ключом pza_… (хранилище harness, окружение или .env).'),
   models: z.array(z.string()).default([...POLZA_STARTER_MODELS]).volatile()
     .description('Белый список моделей каталога Пользы в порядке пикера.'),
@@ -134,7 +138,8 @@ class PolzaAdapter extends PiAiAdapter {
 export function apply(ctx: Context, config: Config): void {
   const baseUrl = trimSlash(config.baseURL)
   const inferenceUrl = `${baseUrl}/v1`
-  const keyRef = credentialRef(config.apiKeyEnv)
+  const keyName = () => config.apiKeyEnv.get()
+  const keyRef = () => credentialRef(keyName())
   const modelsUpdated = () => { ctx.emit('llm/models-updated', PROVIDER) }
 
   const catalog = new PolzaCatalogStore({
@@ -164,7 +169,32 @@ export function apply(ctx: Context, config: Config): void {
   )
 
   const prefs = new PrefsStore(join(dshHome(), 'polza', 'settings.json'))
-  ctx.effect(() => { void prefs.load(); return () => {} }, 'polza: prefs')
+  const prefsReady = prefs.load()
+  let update: UpdateResult = { status: 'unsupported' }
+  let checkUpdates: (() => Promise<void>) | undefined
+  ctx.inject(['pluginManager', 'connection'], (scope) => {
+    scope.effect(() => {
+      const controller = new AbortController()
+      let pending: Promise<void> | undefined
+      const run = (install: boolean) => {
+        if (pending !== undefined) return pending
+        if (update.status === 'restart-required') return Promise.resolve()
+        const enabled = () => !install || prefs.current().autoUpdate
+        update = { status: enabled() ? 'checking' : 'idle' }
+        pending = updatePolza(scope.pluginManager, install, enabled, controller.signal)
+          .then(result => { if (!controller.signal.aborted) update = result })
+          .catch(() => { if (!controller.signal.aborted) update = { status: 'error' } })
+          .finally(() => { pending = undefined })
+        return pending
+      }
+      checkUpdates = () => run(false)
+      void prefsReady.then(() => { if (!controller.signal.aborted) return run(true) })
+      return () => {
+        controller.abort()
+        checkUpdates = undefined
+      }
+    }, 'polza: startup update')
+  })
 
   const reportedMissing = new Set<string>()
   let memo: { whitelist: readonly string[]; profiles: ReadonlyMap<string, ResolvedPiAiProviderProfile> } | undefined
@@ -190,7 +220,7 @@ export function apply(ctx: Context, config: Config): void {
       }
     }
     const profile = buildPolzaProfile({
-      models: routeModels, keyRef, retryPath: `${name}.retryPolicy`,
+      models: routeModels, keyRef: keyRef(), retryPath: `${name}.retryPolicy`,
       modelProviders: id => prefs.current().modelProviders[id],
       providerDetails: id => catalog.currentProviders(id),
     })
@@ -201,10 +231,11 @@ export function apply(ctx: Context, config: Config): void {
   /** Ключ pza_… или undefined, если его нет. */
   const currentKey = async (): Promise<string | undefined> => {
     const credentials = services.credentials
+    const ref = keyRef()
     const value = credentials !== undefined
-      ? (await credentials.resolve(keyRef))?.value
-      : launchEnvironmentOf(ctx).get(keyRef)?.value
-    return value === undefined || value.length === 0 ? undefined : assertUsableApiKey(value, 'dsh-plugin-polza', config.apiKeyEnv)
+      ? (await credentials.resolve(ref))?.value
+      : launchEnvironmentOf(ctx).get(ref)?.value
+    return value === undefined || value.length === 0 ? undefined : assertUsableApiKey(value, 'dsh-plugin-polza', ref)
   }
 
   const adapter = new PolzaAdapter({
@@ -213,7 +244,7 @@ export function apply(ctx: Context, config: Config): void {
       const key = await currentKey()
       if (key !== undefined) return key
       throw new LlmError(
-        `Польза: нет ключа ${config.apiKeyEnv}. Войдите командой /polza login или сохраните ключ: /polza key pza_…`,
+        `Польза: нет ключа ${keyName()}. Войдите командой /polza login или сохраните ключ: /polza key pza_…`,
         'MISSING_CREDENTIAL',
       )
     },
@@ -236,13 +267,20 @@ export function apply(ctx: Context, config: Config): void {
   })
 
   ctx.llm.registerAdapter([PROVIDER], adapter)
+  // Desktop onboarding and Models resolve configured provider keys from this directory.
+  ctx.llm.registerConfigurableProviders([{
+    provider: PROVIDER, displayName: 'Polza', settingsNs: ctx.fiber.entry?.options.id ?? name, settingsPath: [],
+  }])
+  ctx.inject(['settings'], (scope) => {
+    scope.effect(() => scope.settings.configure({ auto: false }, ctx.fiber))
+  })
   ctx.on('loader/volatile-update', () => { memo = undefined; modelsUpdated() })
   // Ключ сохранили или удалили вне плагина (Models, файл учёток) — пикер перечитает список.
-  ctx.on('credentials/reference-updated', (ref) => { if (ref === keyRef) modelsUpdated() })
+  ctx.on('credentials/reference-updated', (ref) => { if (ref === keyRef()) modelsUpdated() })
 
+  const modelsReady = models.load()
   ctx.effect(() => {
     const timer = setInterval(() => { void catalog.refresh() }, Math.max(config.catalogTtlHours, 0.25) * 3_600_000)
-    void models.load()
     void catalog.start()
     return () => { clearInterval(timer) }
   })
@@ -267,16 +305,52 @@ export function apply(ctx: Context, config: Config): void {
     if (service === undefined) throw new Error('в этой сборке нет хранилища учётных данных')
     return service
   }
+  let defaultModel: Context['agentDefaultModel'] | undefined
+  ctx.inject(['agentDefaultModel'], (scope) => {
+    scope.effect(() => {
+      defaultModel = scope.agentDefaultModel
+      return () => { defaultModel = undefined }
+    })
+  })
+  const saveKey = async (key: string) => {
+    const firstConnection = await currentKey().catch(() => undefined) === undefined
+    await credentialsOrThrow().set(keyRef(), key)
+    modelsUpdated()
+    const defaults = defaultModel
+    if (!firstConnection || defaults === undefined) return
+    const previous = defaults.currentSelection()
+    if (previous.provider !== 'deepseek-account' && previous.provider !== 'deepseek-official') return
+    try {
+      await modelsReady
+      await catalog.refresh()
+      const available = await ctx.llm.listModels(PROVIDER)
+      const model = models.current().find(id => available.some(entry => entry.id === id) && catalog.get(id)?.supportsTools === true)
+      if (model === undefined || await currentKey() !== key) return
+      const current = defaults.currentSelection()
+      if (current.provider !== previous.provider || current.model !== previous.model
+        || current.reasoningEffort !== previous.reasoningEffort) return
+      await defaults.saveSelection({ provider: PROVIDER, model })
+      modelsUpdated()
+    } catch {
+      ctx.logger.warn(`${LOG} не удалось выбрать модель Пользы по умолчанию`)
+    }
+  }
+  const removeKey = async () => {
+    await credentialsOrThrow().unset(keyRef())
+    modelsUpdated()
+  }
   const api = new PolzaApi({
     baseUrl,
     currentKey,
-    saveKey: async (key) => { await credentialsOrThrow().set(keyRef, key); modelsUpdated() },
-    removeKey: async () => { await credentialsOrThrow().unset(keyRef); modelsUpdated() },
+    saveKey,
+    removeKey,
     catalog,
     whitelist: models,
     icons: new PolzaIconStore(join(dshHome(), 'polza', 'icons')),
     spend,
     prefs,
+    update: () => update,
+    checkUpdates: () => checkUpdates?.() ?? Promise.resolve(),
     log: (message) => { ctx.logger.warn(`${LOG} ${message}`) },
   })
   ctx.inject(['connection'], (scope) => {
@@ -322,13 +396,12 @@ export function apply(ctx: Context, config: Config): void {
   ctx.inject(['commands'], (child) => {
     registerPolzaCommand(child, {
       baseUrl,
-      keyRef,
-      keyName: config.apiKeyEnv,
-      credentials: () => services.credentials,
+      keyName,
       currentKey,
+      saveKey,
+      removeKey,
       whitelist: () => models.current(),
       catalog,
-      onKeyChanged: modelsUpdated,
     })
   })
 }

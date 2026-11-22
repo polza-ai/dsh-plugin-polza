@@ -82,7 +82,9 @@ export class PolzaStore {
       this.set({ loading: false, error: error instanceof Error ? error.message : String(error) })
     }
     if (this.disposed) return
-    this.timer = setTimeout(() => { void this.refresh() }, this.snapshot.state?.login.pending === true ? LOGIN_POLL_MS : POLL_MS)
+    const state = this.snapshot.state
+    this.timer = setTimeout(() => { void this.refresh() },
+      state?.login.pending === true || state?.updateStatus === 'checking' ? LOGIN_POLL_MS : POLL_MS)
   }
 
   async login(): Promise<string> {
@@ -117,6 +119,11 @@ export class PolzaStore {
 
   async savePrefs(patch: Partial<PolzaPrefs>): Promise<void> {
     await call('prefs', { method: 'POST', body: patch })
+    await this.refresh()
+  }
+
+  async checkUpdates(): Promise<void> {
+    await call('updates/check', { method: 'POST', body: {} })
     await this.refresh()
   }
 
